@@ -36,4 +36,5 @@ Spec::Runner.configure do |config|
     @@fixture_responses ||= {}
     @@fixture_responses[filename] ||= File.read(File.dirname(__FILE__) + '/fixtures/' + filename)
   end
+
 end
