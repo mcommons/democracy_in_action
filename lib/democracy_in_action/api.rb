@@ -186,7 +186,6 @@ module DemocracyInAction
 
     # For new nodes or custom scripts you may wish to specify a hash of custom urls
     attr_reader :urls
-    
 
     # Requires an options hash containing: :username, :password, and :node
     #   
