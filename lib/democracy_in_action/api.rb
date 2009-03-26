@@ -316,7 +316,7 @@ module DemocracyInAction
     # Additional options are attributes which should be set on the record
     def save(options = {})
       options[:xml] = true
-      send_request(@urls[:save], options.merge(param_key(options))).strip[/key="(\d+)/, 1]
+      send_request(@urls[:save], options.merge(param_key(options))).strip[/key="(\d+)/, 2]
     end
 
     # Create a new record
@@ -346,7 +346,7 @@ module DemocracyInAction
     #
     # Returns true if it works, nil otherwise.
     def delete(*args)
-      options = param_key(key)
+      options = param_key(args.shift)
       body = send_request(@urls[:delete], options)
     
       # if it contains '<success', it worked, otherwise a failure
