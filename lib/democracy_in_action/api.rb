@@ -160,7 +160,7 @@ module DemocracyInAction
         :get            => 'https://salsa.democracyinaction.org/api/getObjects.sjs',
         :save           => 'https://salsa.democracyinaction.org/save',
         :delete         => 'https://salsa.democracyinaction.org/api/delete',
-        :count          => 'https://salsa.democracyinaction.org/getCount.sjs',
+        :count          => 'https://salsa.democracyinaction.org/api/getCount.sjs',
         :email          => 'https://salsa.democracyinaction.org/email'
         },
       :wiredforchange => { 
@@ -280,6 +280,49 @@ module DemocracyInAction
     #   :orderBy - a string in the form of an SQL ORDER BY clause, representing the desired sorting pattern of the result set
     #   :key - an integer representing the id of the desired result
     def get(options = {})
+      # run once
+      records = get_page(options.dup)
+      
+      # check if we need to page for more records
+      if options[:key] || (records.size < 500) || (options[:limit] == 500)
+        records
+      else
+        # we need to page
+    
+        # determine what to page by
+        if options[:orderBy]
+          orderBy_direction = options[:orderBy].upcase.include?("DESC") ? "DESC" : "ASC"
+          orderBy_field     = options[:orderBy].sub(/#{orderBy_direction}/i,'').strip
+        else
+          orderBy_direction = "ASC"
+          orderBy_field     = "#{options[:object]}_KEY"
+          options[:orderBy] = "#{orderBy_field} #{orderBy_direction}"
+        end
+        
+        #standardise condition param to an array
+        case options[:condition].class
+        when String   then options[:condition] = [options[:condition]]
+        when Hash     then options[:condition] = options[:condition].map{|k,v| "#{k} = #{v}"}
+        when NilClass then options[:condition] = []
+        end
+        
+        last_results = records
+        while last_results.size == 500 && (options[:limit].nil? || options[:limit].to_i > records.size) do
+          paging_condition = "#{orderBy_field} #{orderBy_direction == 'ASC' ? '>':'<'} #{last_results.last[orderBy_field]}"
+          paging_options = options.dup
+          paging_options[:condition] = options[:condition].dup
+          paging_options[:condition].push(paging_condition)
+          last_results = get_page(paging_options)
+          break if last_results.first == records.first # infinite loop protection
+          records += last_results
+        end
+        
+        records
+      end
+    end
+      
+      
+    def get_page(options = {})
       validate_connection
       url = options[:key] ? urls[:get_by_key] : urls[:get]
       body = send_request(url, options_for_get(options))
