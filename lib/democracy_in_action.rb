@@ -1,5 +1,5 @@
-$:.unshift(File.dirname(__FILE__)) unless
-  $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
+$:.unshift(File.dirname(File.expand_path(__FILE__))) unless
+  $:.include?(File.dirname(File.expand_path(__FILE__))) || $:.include?(File.expand_path(File.dirname(File.expand_path(__FILE__))))
 
 #%w(net/http net/https).each { |f| require f }
 require 'rubygems'

@@ -1,14 +1,17 @@
+
+require 'rexml/document'
+
 module DemocracyInAction
 
   # = Direct usage
   #
   # Once you have initialized your API, you can send a direct request to the service:
-  # 
-  #   @api.request :save, { :object => 'supporter', :Email => 'jones@example.org' } 
-  # 
+  #
+  #   @api.request :save, { :object => 'supporter', :Email => 'jones@example.org' }
+  #
   # This method will ping any url that the API was initialized with,
   # and append the options hash directly to the query string.
-  # 
+  #
   # Most actions can be accomplished via the REST methods ( get, post,
   # put, and delete ).
   #
@@ -21,8 +24,8 @@ module DemocracyInAction
   #   @api.count :object => 'groups', :condition => "Group Name LIKE '%Grannies%'"
   #
   # To save a record that may or may not already exist, use :post or :save
-  # 
-  #   @api.save   :object => 'supporter', :Email => 'jesus@example.org', 
+  #
+  #   @api.save   :object => 'supporter', :Email => 'jesus@example.org',
   #               :First_Name => 'Jesus', :Last_Name => 'Murphy'
   #
   # All actions called with this direct usage syntax *require* an
@@ -32,7 +35,7 @@ module DemocracyInAction
   # only { :key => value }
   #
   # = Object syntax
-  # 
+  #
   # Because every API request requires an object type, the API
   # provides you with a set of instance methods to improve the
   # readablity of your code.  The examples above could be written:
@@ -56,13 +59,13 @@ module DemocracyInAction
   #   @api.groups.get    :condition => 'Group_Name LIKE '%Peaceful%', :limit => 5
   #   # => [ DIA::Result ]
   #
-  # Retrieve only one record with the first method. 
+  # Retrieve only one record with the first method.
   #
   #   @api.groups.first  :condition => 'Group_Name LIKE '%Peaceful%'
   #   #  => DIA::Result ( first returns a single result rather than an array of results )
   #
   # Sort your results with the :orderBy option.
-  # 
+  #
   #   @api.groups.first  :condition => 'Group_Name LIKE '%Peaceful%', :orderBy => 'Date_Created DESC'
   #   #  => DIA::Result (the most recent group)
   #
@@ -80,48 +83,48 @@ module DemocracyInAction
   #   # => [ DIA::Result, DIA::Result, DIA::Result, DIA::Result ]
   #
   # == Creating new records
-  # 
+  #
   # All options passed to post or save will attempt to match a field
   # on the object.  Matching options will be saved to the service.
-  # 
+  #
   #   @api.event.post   :Event_Name => 'Mango Street Block Party', :City => 'New York', :State => 'NY'
   #   #  => 334455
   #   @api.event.save   :Event_Name => 'Papaya Way Block Party'
   #   #  => 334456
   #
   # == Linking records
-  # 
+  #
   # It is possible to link records together by passing a :link option
   # to put, post, or save.
-  # 
+  #
   #   @api.supporter.post   :Email => 'dropkick@example.com', :link => { :event => 334455 }
   #   #  => 76544  This supporter is attending Mango Street Block Party
-  # 
+  #
   # Multiple Records can be linked with a single request.
-  # 
+  #
   #   @api.supporter.put   :key => 76544 , :link => { :event => 334455, :group => [ 234, 235 ] }
   #   #  => 76544  This supporter is attending Mango Street Block Party, and is a member of Grannies Against McSame and another group
   #
   # == Updating records
-  # 
+  #
   # Passing a key or email identifier in your save, put, or post
   # request tells the service to update the existing record.
-  # 
+  #
   #   @api.supporter.put   :key => 76544 , :City => 'Albany', :State => 'NY'
-  #   #  => 76544  
+  #   #  => 76544
   #
   # == Deleting records
-  # 
+  #
   # Delete returns true or nil if the delete operation fails.  A
   # numeric key is the only valid option for delete.
-  # 
+  #
   #   @api.groups.delete :key => 234
   #   # => true
   #   @api.groups.delete(234)
   #   # => nil  ( record not found, we deleted it in the previous example )
   #
   # == Restrictions
-  # 1. Only these characters are accepted in the :condition clause 
+  # 1. Only these characters are accepted in the :condition clause
   #      [0-9a-zA-Z_ .'"<>!=%+&@-]
   #    Putting other characters in names ( like , ) make searching by name not work.
   # 2. Cannot search the supporter_groups links by groups_KEY.
@@ -130,7 +133,7 @@ module DemocracyInAction
   #    your data integrity
   # 4. When deleting a group, the linked records in supporter_groups
   #    are not erased (but when deleting supporter, they are)
-  
+
   class API
     class InvalidKey < ArgumentError #:nodoc:
     end
@@ -143,101 +146,75 @@ module DemocracyInAction
     class ConnectionInvalid < ArgumentError #:nodoc:
     end
 
-    # A list of known DIA nodes and their associated urls
-    NODES = { 
-      :sandbox => {
-        :authenticate   => 'https://sandbox.salsalabs.com/api/authenticate.sjs',
-        :get_by_key     => 'https://sandbox.salsalabs.com/api/getObject.sjs',
-        :get            => 'https://sandbox.salsalabs.com/api/getObjects.sjs',
-        :save           => 'https://sandbox.salsalabs.com/save',
-        :delete         => 'https://sandbox.salsalabs.com/api/delete',
-        :count          => 'https://sandbox.salsalabs.com/getCount.sjs',
-        :email          => 'https://sandbox.salsalabs.com/email'
-        },
-      :salsa => { 
-        :authenticate   => 'https://salsa.democracyinaction.org/api/authenticate.sjs',
-        :get_by_key     => 'https://salsa.democracyinaction.org/api/getObject.sjs',
-        :get            => 'https://salsa.democracyinaction.org/api/getObjects.sjs',
-        :save           => 'https://salsa.democracyinaction.org/save',
-        :delete         => 'https://salsa.democracyinaction.org/api/delete',
-        :count          => 'https://salsa.democracyinaction.org/api/getCount.sjs',
-        :email          => 'https://salsa.democracyinaction.org/email'
-        },
-      :wiredforchange => { 
-        :get     => 'http://salsa.wiredforchange.com/dia/api/get.jsp',
-        :save => 'http://salsa.wiredforchange.com/dia/api/process.jsp',
-        :delete  => 'http://salsa.wiredforchange.com/dia/deleteEntry.jsp'
-        },
-      :org2 => { 
-        :get     => 'http://org2.democracyinaction.org/dia/api/get.jsp',
-        :save => 'http://org2.democracyinaction.org/dia/api/process.jsp',
-        :delete  => 'http://org2.democracyinaction.org/dia/api/delete.jsp'
-        }
-      }
-
     # The username used to login to your Democracy in Action account.
     attr_reader :username
 
     # The password used to login to your Democracy in Action account.
     attr_reader :password
 
-    # node is a short key representing DIA servers that are known to the library ( see NODES )
-    attr_reader :node
+    # host is the host name for the DIA node
+    attr_reader :host
 
     # For new nodes or custom scripts you may wish to specify a hash of custom urls
-    attr_reader :urls
+    attr_accessor :urls
 
-    # Requires an options hash containing: :username, :password, and :node
-    #   
-    # :node can be skipped if :urls hash is included instead.
+    # Requires an options hash containing: :username, :password, and :host
+    #
+    # :host can be skipped if :urls hash is included instead.
     #
     # If a :urls hash is used, it should have the form:
     #   :urls => { :get => "get_url", :save => "save_url", :delete => "delete_url" }
-    # 
+    #
     # TODO(adam): Please write a test to test this assumption.
-    # 
+    #
     # Cavet: Its okay to initialize w/out validaton data; but a
     # ConnectionInvalid error will be raised on the first attempt to
     # make an RPC call that requires validaton.
-    # 
-    def initialize(options={}, username=nil, password=nil, node=nil, urls=nil)
-      @options = options.clone 
-
-      @username = username
-      @password = password
-      @node = node 
-      @urls = urls 
-
-      set_auth_parameters 
+    #
+    def initialize(options={})
+      @options = options.clone
+      set_auth_parameters
     end
 
     def set_auth_parameters
       @username ||= @options.delete(:username) || @options.delete(:email)
       @password ||= @options.delete(:password)
-      @node     ||= @options.delete(:node)
-      @urls     ||= @options[:urls] || NODES[node]
+      @host     ||= @options.delete(:host)
+      @urls     ||= @options[:urls] || urls_for(@host)
+    end
+
+    def urls_for(current_host)
+      {
+        :base           => "https://#{current_host}",
+        :authenticate   => "https://#{current_host}/api/authenticate.sjs",
+        :get_by_key     => "https://#{current_host}/api/getObject.sjs",
+        :get            => "https://#{current_host}/api/getObjects.sjs",
+        :save           => "https://#{current_host}/save",
+        :delete         => "https://#{current_host}/api/delete",
+        :count          => "https://#{current_host}/getCount.sjs",
+        :email          => "https://#{current_host}/email"
+      }
     end
 
     def load_config(keyword)
-      YAML.load_file("#{File.dirname(__FILE__)}/../../config/nodes/#{keyword}.yml")
+      YAML.load_file("#{File.dirname(File.expand_path(__FILE__))}/../../config/nodes/#{keyword}.yml")
     end
 
     def test_auth_parameters
-      raise ConnectionInvalid.new("Must specify :username, :password, and ( :node or :url )") unless self.username && self.password && ( self.node || @options[:urls] )
+      raise ConnectionInvalid.new("Must specify :username, :password, and ( :host or :url )") unless self.username && self.password && ( self.host || @options[:urls] )
     end
 
     def validate_connection
       test_auth_parameters
-      raise ConnectionInvalid.new("Requested node is not supported.  Use (#{NODES.keys.join(', ')}) or specify a custom array in :urls") unless urls
-      raise ConnectionInvalid.new("Urls must be a hash") unless urls.is_a?(Hash)
-      raise ConnectionInvalid.new("Urls must include at least :get and :authenticate ( :save, :delete, and :count are nice too )") unless urls[:get] && urls[:authenticate]
+      raise ConnectionInvalid.new("Urls must be a hash") unless @urls.is_a?(Hash)
+      raise ConnectionInvalid.new("Urls must include at least :get and :authenticate ( :save, :delete, and :count are nice too )") unless @urls[:get] && @urls[:authenticate]
     end
 
     # Confirm that the API is enabled and the remote service is reachable
     def connected?
       begin
-        return @authenticated || authenticate 
-      rescue SocketError, ConnectionInvalid 
+        return @authenticated || authenticate
+      rescue SocketError, ConnectionInvalid
         # The library cannot reach the DIA server.  Connectivity problem?
         false
       end
@@ -248,14 +225,15 @@ module DemocracyInAction
     # Connect to the service and check the current credentials
     def authenticate
       validate_connection
-      raise ConnectionInvalid if authentication_request =~ /Invalid login/
+      raise ConnectionInvalid.new("Invalid login") if authentication_request =~ /Invalid login/
       @authenticated = true
     end
 
     def authentication_request
       @client = HTTPClient.new
-      @auth_response = @client.post(@urls[:authenticate],"email=#{username}&password=#{password}")
-      @auth_response.body.content
+      @auth_response = @client.post(@urls[:authenticate],{:email=>username, :password=>password})
+      body = @auth_response.body
+      body.is_a?(HTTP::Message::Body) ? body.content : body
     end
 
     def authenticated?
@@ -265,14 +243,14 @@ module DemocracyInAction
     # A raw request.  Requires the symbol for the url to hit ( ie :save, :get ) and a hash of options to be appended to the query string.
     def request( url_symbol, options = {} )
       raise InvalidUrl.new("Could not find :#{url_symbol} in api url keys") unless @urls.include?(url_symbol)
-      send_request @urls[ url_symbol ], options 
+      send_request @urls[ url_symbol ], options
     end
 
 
     # Return one or more records from the service
-    #   
+    #
     # Supports
-    #   :condition 
+    #   :condition
     #      * a string or array of strings in the format of SQL WHERE clauses
     #        = and LIKE operators may be used
     #      * a hash in the form of { :field_name => value, :field_name => value }
@@ -282,64 +260,45 @@ module DemocracyInAction
     def get(options = {})
       # run once
       records = get_page(options.dup)
-      
+
       # check if we need to page for more records
-      if options[:key] || (records.size < 500) || (options[:limit] == 500)
+      if options[:key] || (records.size < 500) || (options[:limit].to_s.include?(','))
         records
       else
         # we need to page
-    
-        # determine what to page by
-        if options[:orderBy]
-          orderBy_direction = options[:orderBy].upcase.include?("DESC") ? "DESC" : "ASC"
-          orderBy_field     = options[:orderBy].sub(/#{orderBy_direction}/i,'').strip
-        else
-          orderBy_direction = "ASC"
-          orderBy_field     = "#{options[:object]}_KEY"
-          options[:orderBy] = "#{orderBy_field} #{orderBy_direction}"
-        end
-        
-        #standardise condition param to an array
-        case options[:condition].class
-        when String   then options[:condition] = [options[:condition]]
-        when Hash     then options[:condition] = options[:condition].map{|k,v| "#{k} = #{v}"}
-        when NilClass then options[:condition] = []
-        end
-        
         last_results = records
-        while last_results.size == 500 && (options[:limit].nil? || options[:limit].to_i > records.size) do
-          paging_condition = "#{orderBy_field} #{orderBy_direction == 'ASC' ? '>':'<'} #{last_results.last[orderBy_field]}"
+
+        while last_results.size == 500 do
           paging_options = options.dup
-          paging_options[:condition] = options[:condition].dup
-          paging_options[:condition].push(paging_condition)
+          if(options[:limit].nil?)
+            paging_options[:limit] = "#{records.size},500"
+          else
+            paging_options[:limit] = "#{records.size},#{[500,(options[:limit].to_i - records.size)].min}"
+          end
           last_results = get_page(paging_options)
           break if last_results.first == records.first # infinite loop protection
           records += last_results
         end
-        
+
         records
       end
     end
-      
-      
+
+
     def get_page(options = {})
       validate_connection
-      url = options[:key] ? urls[:get_by_key] : urls[:get]
+      url = options[:key] ? @urls[:get_by_key] : @urls[:get]
       body = send_request(url, options_for_get(options))
-      if has_error?( body )
-        error(body)
-      else 
-        if options[:key]
-          parse(body).result.first
-        else
-          parse(body).result
-        end
+      if options[:key]
+        parse(body).result.first
+      else
+        parse(body).result
       end
     end
 
     alias :all :get
 
-    # Returns only the first result in a result set.  
+    # Returns only the first result in a result set.
     #
     # Accepts :condition and :orderBy.
     def first(options = {} )
@@ -359,14 +318,14 @@ module DemocracyInAction
     # Additional options are attributes which should be set on the record
     def save(options = {})
       options[:xml] = true
-      send_request(@urls[:save], options.merge(param_key(options))).strip[/key="(\d+)/, 2]
+      send_request(@urls[:save], options.merge(param_key(options))).strip[/key="(\d+)/, 1]
     end
 
     # Create a new record
     #
     # The options are attributes which should be set on the new record
     def post( options = {})
-      save( options ) 
+      save( options )
     end
 
     # Update an existing record
@@ -377,8 +336,9 @@ module DemocracyInAction
     def put( options = {} )
       required_keys = [ :key, 'key', options[:object] + '_KEY', ( options[:object] + '_KEY').to_sym ]
       required_keys += [ 'Email', :Email ] if options[:object] == 'supporter' || options[:object] == :supporter
+      required_keys += [ 'report_KEY', :report_KEY ] if options[:object] == 'export' || options[:object] == :export
       raise InvalidKey.new( "You must specify :key, :Email, or #{options[:object]}_KEY to update a record" ) unless options.any? { |optkey, value| required_keys.include?(optkey) }
-      save( options ) 
+      save( options )
     end
 
     # Delete an existing record.
@@ -389,9 +349,9 @@ module DemocracyInAction
     #
     # Returns true if it works, nil otherwise.
     def delete(*args)
-      options = param_key(args.shift)
+      options = param_key(key)
       body = send_request(@urls[:delete], options)
-    
+
       # if it contains '<success', it worked, otherwise a failure
       body.include?('<success')
     end
@@ -401,11 +361,11 @@ module DemocracyInAction
     # Allows a :condition to restrict the result set.
     def count(options = {})
       xml = send_request(@urls[:count], options_for_get(options))
-      parse(xml).count unless has_error?(xml)
+      parse(xml).count
     end
-    
+
     # Return a description of the columns for a given object.
-    # 
+    #
     # The response is a Hash of Result objects, with field names as keys.
     #
     # The fields are described with the keys :field, :type, :null, :key, :default, and :extra
@@ -413,7 +373,7 @@ module DemocracyInAction
     # Not all keys are specified for all fields.
     def columns(options = {}) #:nodoc:
       body = send_request @urls[:get], options_for_get(options)
-      parse( body, DIA_Desc_Listener ).result unless has_error?(body)
+      parse( body, DIA_Desc_Listener ).result
     end
 
 
@@ -424,14 +384,20 @@ module DemocracyInAction
 
     #evaluates xml and returns true if it contains an error
     def has_error?(xml)
-      xml =~ /<error>Invalid login/
+      xml =~ /<error/
+    end
+
+    def check_for_errors(xml)
+      if has_error?(xml)
+        raise REXML::Document.new(xml).get_text('//error').to_s
+      end
     end
 
     # Accepts XML and returns an array of DIA::Result objects
     #
     # Accepts a class name to serve as the StreamListener as an optional second argument
     #
-    # Returns a populated instance of the passed class 
+    # Returns a populated instance of the passed class
     def parse(xml, listener_class = DIA_Get_Listener )
       listener = listener_class.new
       parser = REXML::Parsers::StreamParser.new(xml, listener)
@@ -452,12 +418,12 @@ module DemocracyInAction
     end
 
     # Evaluates an options hash for the presence of a key and returns a hash in the form { :key => value }
-    # if a key is present.  
+    # if a key is present.
     #
     # Returns an empty Hash when no key is present.
     def param_key( options = {} )
       return { :key => options } if options && !options.is_a?(Hash)
-      
+
       key_type = options[:key] ? :key : 'key'
       return {} unless key_value = options[key_type]
       key_value = key_value.join(', ') if key_value.is_a?(Array)
@@ -470,13 +436,13 @@ module DemocracyInAction
     #
     # Returns an empty hash if no :condition is found in the param, otherwise returns a hash { :condition => value }
     def param_condition( options = {} )
-      return {} unless condition = options.delete(:condition) 
+      return {} unless condition = options.delete(:condition)
       return { :condition => condition }  unless condition.is_a?(Hash)
       { :condition => condition.inject( [] ) { |memo, (column, value)| memo << "#{column}=#{value}" } }
     end
 
     # Converts a link hash to DIA format.
-    # 
+    #
     # Every key is a object name, with values that are single or multiple records in that table.
     #
     # Returns an empty array if no :link parameter is passed, otherwise returns an array of query param strings.
@@ -491,7 +457,7 @@ module DemocracyInAction
     end
 
     # Returns the options hash as a url-encoded string of key-value pairs.
-    # 
+    #
     # Array values have their keys duplicated, creating key-value pairs for each element in the array.
     def build_body(options={})
       options[:object] ||= options.delete(:table) if options[:table]
@@ -508,7 +474,12 @@ module DemocracyInAction
     # Returns the body of the response.
     def send_request(base_url, options={})
       raise NoTableSpecified.new("You must either include :object in the options hash or use the proxy methods API#[objectname].get") unless options[:object]
-      client.get(base_url, build_body(options)).body.content
+      body = MC::Rescue.network_attempt do
+        client.get(base_url, build_body(options)).body
+      end
+      body = body.content if body.is_a?(HTTP::Message::Body)
+      check_for_errors(body)
+      body
     end
 
     def client
@@ -517,10 +488,10 @@ module DemocracyInAction
 
     # Checks for a method being one of the supported objects and
     # returns a TableProxy if it is
-    
+
     def method_missing(*args) #:nodoc:
       table_name = args.first
-      
+
       if Tables.list.include?(table_name)
         return TableProxy.new(self, table_name)
       end

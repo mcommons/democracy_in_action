@@ -6,7 +6,7 @@ rescue LoadError
   require 'spec'
 end
 
-$:.unshift(File.dirname(__FILE__) + '/../lib')
+$:.unshift(File.dirname(File.expand_path(__FILE__)) + '/../lib')
 require 'pp'
 require 'democracy_in_action'
 require 'democracy_in_action/test_methods'
@@ -34,7 +34,6 @@ Spec::Runner.configure do |config|
 
   def fixture_file_read(filename)
     @@fixture_responses ||= {}
-    @@fixture_responses[filename] ||= File.read(File.dirname(__FILE__) + '/fixtures/' + filename)
+    @@fixture_responses[filename] ||= File.read(File.dirname(File.expand_path(__FILE__)) + '/fixtures/' + filename)
   end
-
 end

@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + "/spec_helper"
+require File.dirname(File.expand_path(__FILE__)) + "/spec_helper"
 require 'spec/have_the_same_xml_structure'
 
 describe "xml documents with same structure" do

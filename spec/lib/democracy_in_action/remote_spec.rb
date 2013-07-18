@@ -2,7 +2,7 @@ if !ENV['REMOTE']
   puts "not running remote specs, set ENV['REMOTE']"
 else
 
-require File.dirname(__FILE__) + "/../../spec_helper"
+require File.dirname(File.expand_path(__FILE__)) + "/../../spec_helper"
 require 'httpclient'
 
 NODE    = 'https://sandbox.salsalabs.com'
